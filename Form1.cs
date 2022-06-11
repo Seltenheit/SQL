@@ -15,6 +15,9 @@ namespace MSSQL
     public partial class Form1 : Form
     {
         private SqlConnection sqlCon = null;
+
+        private SqlConnection nrthwndCon = null;
+
         public Form1()
         {
             InitializeComponent();
@@ -23,14 +26,15 @@ namespace MSSQL
         private void Form1_Load(object sender, EventArgs e)
         {
             sqlCon = new SqlConnection(ConfigurationManager.ConnectionStrings["DBLink"].ConnectionString);
-
             sqlCon.Open();
 
-            if (sqlCon.State == ConnectionState.Open)
-            {
-                MessageBox.Show("Connection set");
-            }
+            //if (sqlCon.State == ConnectionState.Open)
+            //{
+            //    MessageBox.Show("Connection set");
+            //}
 
+            nrthwndCon = new SqlConnection(ConfigurationManager.ConnectionStrings["NorthWindDB"].ConnectionString);
+            nrthwndCon.Open();
 
         }
 
@@ -60,5 +64,16 @@ namespace MSSQL
             MessageBox.Show(command.ExecuteNonQuery().ToString());
 
         }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            SqlDataAdapter dataAdapter = new SqlDataAdapter(textBox7.Text, nrthwndCon);
+
+            DataSet dataSet = new DataSet();
+            dataAdapter.Fill(dataSet);
+
+            dataGridView1.DataSource = dataSet.Tables[0];
+        }
+
     }
 }
