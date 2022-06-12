@@ -10,13 +10,17 @@ using System.Windows.Forms;
 using System.Configuration;
 using System.Data.SqlClient;
 
+
 namespace MSSQL
 {
     public partial class Form1 : Form
     {
         private SqlConnection sqlCon = null;
-
         private SqlConnection nrthwndCon = null;
+
+        private List<string[]> rows = new List<string[]>();
+        private List<string[]> filteredList = null;
+
 
         public Form1()
         {
@@ -36,7 +40,60 @@ namespace MSSQL
             nrthwndCon = new SqlConnection(ConfigurationManager.ConnectionStrings["NorthWindDB"].ConnectionString);
             nrthwndCon.Open();
 
+            SqlDataAdapter dataAdapter = new SqlDataAdapter("SELECT * FROM Products", nrthwndCon);
+            DataSet dataBase = new DataSet();
+            dataAdapter.Fill(dataBase);
+
+            dataGridView2.DataSource = dataBase.Tables[0];
+
+
+            SqlDataReader dataReader = null;
+
+            string[] row = null;
+
+            try
+            {
+                SqlCommand sqlCommand = new SqlCommand(
+                    "SELECT ProductName, QuantityPerUnit, UnitPrice FROM Products",
+                    nrthwndCon);
+
+                dataReader = sqlCommand.ExecuteReader();
+
+                while(dataReader.Read())
+                {
+                    row = new string[]
+                    {
+                        Convert.ToString(dataReader["ProductName"]),
+                        Convert.ToString(dataReader["QuantityPerUnit"]),
+                        Convert.ToString(dataReader["UnitPrice"])
+                    };
+
+                    rows.Add(row);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+            finally
+            {
+                if(dataReader != null && !dataReader.IsClosed)
+                {
+                    dataReader.Close();
+                }
+            }
+            RefreshList(rows);
         }
+
+        private void RefreshList(List<string[]> list)
+        {
+            listView2.Items.Clear();
+            foreach (string[] s in list)
+            {
+                listView2.Items.Add(new ListViewItem(s));
+            }
+        }
+
 
         private void button1_Click(object sender, EventArgs e)
         {
@@ -89,14 +146,14 @@ namespace MSSQL
 
                 ListViewItem item = null;
 
-                while(dataReader.Read())
+                while (dataReader.Read())
                 {
-                    item = new ListViewItem(new string[] { Convert.ToString(dataReader["ProductName"]), 
-                        Convert.ToString(dataReader["QuantityPerUnit"]), 
+                    item = new ListViewItem(new string[] { Convert.ToString(dataReader["ProductName"]),
+                        Convert.ToString(dataReader["QuantityPerUnit"]),
                         Convert.ToString(dataReader["UnitPrice"]) });
 
                     listView1.Items.Add(item);
-                } 
+                }
             }
             catch (Exception ex)
             {
@@ -104,10 +161,75 @@ namespace MSSQL
             }
             finally
             {
-                if(dataReader != null && !dataReader.IsClosed)
+                if (dataReader != null && !dataReader.IsClosed)
                 {
                     dataReader.Close();
                 }
+            }
+        }
+
+        private void textBox8_TextChanged(object sender, EventArgs e)
+        {
+            (dataGridView2.DataSource as DataTable).DefaultView.RowFilter = $"ProductName LIKE '%{textBox8.Text}%'";
+        }
+
+        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            switch (comboBox1.SelectedIndex)
+            {
+                case 0:
+                    (dataGridView2.DataSource as DataTable).DefaultView.RowFilter = $"UnitsInStock <= 10";
+                    break;
+                case 1:
+                    (dataGridView2.DataSource as DataTable).DefaultView.RowFilter = $"UnitsInStock <= 10 AND UnitsInStock <= 50";
+                    break;
+                case 2:
+                    (dataGridView2.DataSource as DataTable).DefaultView.RowFilter = $"UnitsInStock >= 50";
+                    break;
+                case 3:
+                    (dataGridView2.DataSource as DataTable).DefaultView.RowFilter = "";
+                    break;
+            }
+        }
+
+        private void textBox9_TextChanged(object sender, EventArgs e)
+        {
+            filteredList = rows.Where((x) =>
+            x[0].ToLower().Contains(textBox9.Text.ToLower())).ToList();
+
+            RefreshList(filteredList);
+        }
+
+        private void comboBox2_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            switch (comboBox2.SelectedIndex)
+            {
+                case 0:
+                    filteredList = rows.Where((x) =>
+                    double.Parse(x[2]) <= 10).ToList();
+
+                    RefreshList(filteredList);
+
+                    break;
+                case 1:
+                    filteredList = rows.Where((x) =>
+                    double.Parse(x[2]) > 10 && double.Parse(x[2]) <= 100).ToList();
+
+                    RefreshList(filteredList);
+
+                    break;
+                case 2:
+                    filteredList = rows.Where((x) =>
+                    double.Parse(x[2]) > 100).ToList();
+
+                    RefreshList(filteredList);
+
+                    break;
+                case 3:
+
+                    RefreshList(filteredList);
+
+                    break;
             }
         }
     }
